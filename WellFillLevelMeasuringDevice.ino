@@ -1,23 +1,24 @@
-#include <SPI.h>
-#include <Ethernet.h>
 #include <NewPing.h>
+#include <Ethernet.h>
 #include <PubSubClient.h>
+#include "config.h"
 
-byte mac[] = {};   // Be sure this address is unique in your network
+#define TRIGGER_PIN  5
+#define ECHO_PIN     6
+#define MAX_DISTANCE 500
 
-IPAddress ip();
+char topic[] = "waldBrunnen";
 
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 EthernetClient client;
-
-const char* mqtt_server = "";
-PubSubClient pubClient(client);
+PubSubClient pubClient(config.mqttServerIp, 1883, client);
 
 void reconnect() {
   // Loop until we're reconnected
   while (!pubClient.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (pubClient.connect(1, "", "")) {
+    if (pubClient.connect(1, config.mqttUsername, config.mqttPassword)) {
       Serial.println("connected");
     } else {
       Serial.print("failed, rc=");
@@ -29,21 +30,20 @@ void reconnect() {
   }
 }
 
-int zahl = 1;
 void(* resetFunc) (void) = 0;
  
 void setup() {     
   Serial.begin(9600);
   delay(200);
 
-  Ethernet.begin(mac, ip);
+  Ethernet.begin(config.mac, config.ip);
   Serial.println("Ethernet ready");
   // print the Ethernet board/shield's IP address:
   Serial.print("My IP address: ");
   Serial.println(Ethernet.localIP());
   // give the Ethernet shield a second to initialize:
   delay(1000);
-
+  
   reconnect();
 }
 
@@ -52,23 +52,18 @@ void loop()
   if (!pubClient.connected()) {
     reconnect();
   }
-
-  String str = String(zahl+1);
+  
+  int distance = sonar.ping_cm();
+  if(distance > 0){
+    String str = String(distance);
     int str_len = str.length() + 1;
     char char_array[str_len];
     str.toCharArray(char_array, str_len);
-
-    pubClient.publish("waldBrunnen", char_array, false);
   
-  Serial.println(zahl);
-  Serial.println("A");
-  delay(1000);               
-  Serial.println("B");
-  delay(1000);               
-  Serial.println("Now we are Resetting Arduino Programmatically");
-  Serial.println();
-  delay(1000);
-  resetFunc();
-  Serial.println("Arrduino will never reach there.");
- 
+    pubClient.publish(topic, char_array, false);
+  }
+  
+  Serial.println(distance);
+  delay(100);
+  resetFunc(); 
 }

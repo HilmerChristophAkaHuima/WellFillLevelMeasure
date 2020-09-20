@@ -1,4 +1,4 @@
-# WellFillLevelMeasure
+# WellFillLevelMeasuringDevice
 WellFillMeasureDevice measures the distance between the water level in the well and the ultrasonic sensors and passes it on to the mqtt server.
 
 Hardware: 
